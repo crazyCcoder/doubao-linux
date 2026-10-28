@@ -8,6 +8,7 @@ doubao_client 的桌面壳能力：会话保持、下载、外链跳转、快捷
 
 import os
 import sys
+import json
 import html
 import urllib.parse
 
@@ -30,7 +31,7 @@ ICON_PATH = "/usr/share/icons/hicolor/256x256/apps/doubao.png"
 LOCAL_ICON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "doubao.png")
 UA = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/114.0.0.0 Safari/537.36 DoubaoDesktop/1.0.1"
+    "Chrome/114.0.0.0 Safari/537.36 DoubaoDesktop/1.0.2"
 )
 
 ERROR_PAGE = """<!DOCTYPE html><html><head><meta charset="utf-8">
@@ -48,12 +49,44 @@ text-decoration:none;font-size:14px}}
 </div></body></html>"""
 
 
+PERF_JS = """
+(function () {
+  if (window.__doubao_perf) return;
+  window.__doubao_perf = [];
+  function push(o) {
+    window.__doubao_perf.push(o);
+    if (window.__doubao_perf.length > 200) window.__doubao_perf.splice(0, 100);
+  }
+  try {
+    var last = performance.now();
+    setInterval(function () {
+      var now = performance.now(), lag = now - last - 100;
+      last = now;
+      if (lag > 250)
+        push({k: "block", ms: Math.round(lag),
+              url: String(location.href).slice(0, 120)});
+    }, 100);
+  } catch (e) {}
+  try {
+    new PerformanceObserver(function (l) {
+      l.getEntries().forEach(function (e) {
+        if (e.duration >= 1000)
+          push({k: "slowres", ms: Math.round(e.duration),
+                url: String(e.name).slice(0, 160)});
+      });
+    }).observe({entryTypes: ["resource"]});
+  } catch (e) {}
+})();
+"""
+
+
 class DoubaoWindow(Gtk.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app, title="豆包")
         self.set_default_size(1280, 820)
         self.set_position(Gtk.WindowPosition.CENTER)
         self._error_shown = False
+        self._poller = 0
 
         icon = ICON_PATH if os.path.exists(ICON_PATH) else LOCAL_ICON
         if os.path.exists(icon):
@@ -67,10 +100,14 @@ class DoubaoWindow(Gtk.ApplicationWindow):
         settings.set_user_agent(UA)
         settings.set_property("enable-page-cache", True)
         settings.set_property("enable-webgl", True)
+        settings.set_property("enable-accelerated-2d-canvas", True)
+        settings.set_property("enable-dns-prefetching", True)
         settings.set_property("enable-media-stream", True)
         settings.set_property("enable-mediasource", True)
         settings.set_property("javascript-can-open-windows-automatically", False)
         settings.set_property("allow-file-access-from-file-urls", False)
+
+        self._debug = os.environ.get("DOUBAO_DEBUG") == "1"
 
         self.view.connect("load-failed", self._on_load_failed)
         self.view.connect("load-changed", self._on_load_changed)
@@ -89,6 +126,25 @@ class DoubaoWindow(Gtk.ApplicationWindow):
     def _on_load_changed(self, view, event):
         if event == WebKit2.LoadEvent.FINISHED:
             self._error_shown = False
+            if self._debug:
+                view.run_javascript(PERF_JS, None, None, None)
+                if not self._poller:
+                    self._poller = GLib.timeout_add(2000, self._poll_perf)
+
+    def _poll_perf(self):
+        self.view.run_javascript(
+            "(function(){var a=(window.__doubao_perf||[]).splice(0,80);return JSON.stringify(a);})()",
+            None, self._on_perf, None)
+        return True
+
+    def _on_perf(self, view, result, _data):
+        try:
+            items = json.loads(view.run_javascript_finish(result).get_js_value().to_string() or "[]")
+        except Exception:
+            return
+        for item in items:
+            print("[perf] %s %sms %s" % (item.get("k"), item.get("ms"), item.get("url")),
+                  file=sys.stderr, flush=True)
 
     def _on_load_failed(self, view, event, uri, error):
         if self._error_shown:

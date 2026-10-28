@@ -35,7 +35,7 @@
 系统要求：Debian / Ubuntu / Deepin / UOS 等 amd64 桌面系统。
 
 ```bash
-sudo dpkg -i doubao_1.0.1_amd64.deb
+sudo dpkg -i doubao_1.0.2_amd64.deb
 sudo apt -f install   # 自动补齐依赖
 ```
 
@@ -59,7 +59,7 @@ sudo apt remove doubao
 打包源目录为 `build/doubao-deb/`（Debian 包标准目录结构）：
 
 ```bash
-dpkg-deb --build --root-owner-group build/doubao-deb doubao_1.0.1_amd64.deb
+dpkg-deb --build --root-owner-group build/doubao-deb doubao_1.0.2_amd64.deb
 ```
 
 ## 项目结构
@@ -68,7 +68,7 @@ dpkg-deb --build --root-owner-group build/doubao-deb doubao_1.0.1_amd64.deb
 .
 ├── .gitignore                  # 忽略官方 exe 参考样本（专有二进制，不入库）
 ├── README.md                   # 本说明
-├── doubao_1.0.1_amd64.deb      # 构建产物：Linux 安装包
+├── doubao_1.0.2_amd64.deb      # 构建产物：Linux 安装包
 └── build/doubao-deb/           # deb 打包源目录
     ├── DEBIAN/                 # control / postinst / postrm
     ├── opt/doubao/doubao.py    # 客户端主体（约 200 行 Python）
@@ -104,6 +104,21 @@ G_TLS_GNUTLS_PRIORITY="NORMAL:-VERS-TLS1.3" doubao
 ```
 
 同时检查是否启用了代理 / VPN（其证书或 TLS 策略也可能导致握手失败）。
+
+### 点击某些功能后异常卡顿
+
+1.0.2 已开启 WebKit 的 2D canvas 硬件加速与 DNS 预取。若仍卡顿，用调试模式启动
+定位具体原因（卡顿时把终端里 `[perf]` 开头的行记录下来）：
+
+```bash
+DOUBAO_DEBUG=1 doubao
+```
+
+- `[perf] block 1200ms ...` —— 页面主线程被阻塞的时长（前端自身 JS 重计算）
+- `[perf] slowres 3500ms <url>` —— 超过 1 秒的慢请求（网络/接口问题）
+
+两者区别很重要：`block` 多说明卡在页面脚本运算（WebKit 引擎侧），`slowres` 多
+说明卡在等待网络响应。
 
 ## 已知限制
 

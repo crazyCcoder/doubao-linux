@@ -1,8 +1,8 @@
 Package: doubao
-Version: 1.0.1
+Version: 1.0.2
 Architecture: amd64
 Maintainer: Doubao Linux Port <doubao@localhost>
-Installed-Size: 128
+Installed-Size: 132
 Depends: python3 (>= 3.7), python3-gi, gir1.2-gtk-3.0, gir1.2-webkit2-4.0, libwebkit2gtk-4.0-37
 Section: net
 Priority: optional
