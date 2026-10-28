@@ -35,7 +35,7 @@
 系统要求：Debian / Ubuntu / Deepin / UOS 等 amd64 桌面系统。
 
 ```bash
-sudo dpkg -i doubao_1.0.0_amd64.deb
+sudo dpkg -i doubao_1.0.1_amd64.deb
 sudo apt -f install   # 自动补齐依赖
 ```
 
@@ -59,7 +59,7 @@ sudo apt remove doubao
 打包源目录为 `build/doubao-deb/`（Debian 包标准目录结构）：
 
 ```bash
-dpkg-deb --build --root-owner-group build/doubao-deb doubao_1.0.0_amd64.deb
+dpkg-deb --build --root-owner-group build/doubao-deb doubao_1.0.1_amd64.deb
 ```
 
 ## 项目结构
@@ -68,7 +68,7 @@ dpkg-deb --build --root-owner-group build/doubao-deb doubao_1.0.0_amd64.deb
 .
 ├── .gitignore                  # 忽略官方 exe 参考样本（专有二进制，不入库）
 ├── README.md                   # 本说明
-├── doubao_1.0.0_amd64.deb      # 构建产物：Linux 安装包
+├── doubao_1.0.1_amd64.deb      # 构建产物：Linux 安装包
 └── build/doubao-deb/           # deb 打包源目录
     ├── DEBIAN/                 # control / postinst / postrm
     ├── opt/doubao/doubao.py    # 客户端主体（约 200 行 Python）
@@ -84,6 +84,26 @@ dpkg-deb --build --root-owner-group build/doubao-deb doubao_1.0.0_amd64.deb
 - 数据目录：遵循 XDG 规范，存储于 `~/.local/share/webkitgtk/` 等默认位置
 - 已在 UOS Desktop 20 Professional（x11）上实测：页面渲染、断网重试页、
   窗口类名（`StartupWMClass=doubao`）与菜单图标均正常
+
+## 故障排查
+
+### 启动后显示「暂时无法加载豆包 · Peer failed to perform TLS handshake」
+
+这是**网络层 TLS 握手被拒绝**，与客户端界面无关。实测结论：
+
+- 豆包 CDN 对 **TLS 1.3** 握手与 **GnuTLS 3.6**（Debian 10 / UOS 20 自带的
+  `glib-networking` 底层库）组合不兼容，服务端会中断握手；同一环境下
+  OpenSSL（curl / Chrome）以及 GnuTLS 走 **TLS 1.2** 均正常
+- 1.0.1 起客户端已在进程内固定 `G_TLS_GNUTLS_PRIORITY=NORMAL:-VERS-TLS1.3`，
+  只影响本应用，不修改系统配置，无需额外设置
+
+若仍偶发，可手动确认环境变量是否生效：
+
+```bash
+G_TLS_GNUTLS_PRIORITY="NORMAL:-VERS-TLS1.3" doubao
+```
+
+同时检查是否启用了代理 / VPN（其证书或 TLS 策略也可能导致握手失败）。
 
 ## 已知限制
 

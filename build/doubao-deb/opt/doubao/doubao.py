@@ -11,9 +11,15 @@ import sys
 import html
 import urllib.parse
 
+# 豆包 CDN 的 TLS 1.3 握手与 GnuTLS 3.6（UOS/Debian 10 自带的 glib-networking）不兼容，
+# 表现为 "Peer failed to perform TLS handshake"。GnuTLS 3.6 走 TLS 1.2 则一切正常，
+# 故在导入 gi 前固定优先级，仅在进程内生效，不修改系统配置。
+os.environ.setdefault("G_TLS_GNUTLS_PRIORITY", "NORMAL:-VERS-TLS1.3")
+
 import gi
 
 gi.require_version("Gtk", "3.0")
+gi.require_version("Gdk", "3.0")
 gi.require_version("WebKit2", "4.0")
 
 from gi.repository import Gdk, Gio, GLib, Gtk, WebKit2
@@ -24,7 +30,7 @@ ICON_PATH = "/usr/share/icons/hicolor/256x256/apps/doubao.png"
 LOCAL_ICON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "doubao.png")
 UA = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/114.0.0.0 Safari/537.36 DoubaoDesktop/1.0.0"
+    "Chrome/114.0.0.0 Safari/537.36 DoubaoDesktop/1.0.1"
 )
 
 ERROR_PAGE = """<!DOCTYPE html><html><head><meta charset="utf-8">
@@ -88,7 +94,10 @@ class DoubaoWindow(Gtk.ApplicationWindow):
         if self._error_shown:
             return True
         self._error_shown = True
-        reason = html.escape(error.message or "网络连接失败")
+        message = error.message or "网络连接失败"
+        if "TLS" in message or "tls" in message:
+            message += "（若使用代理/VPN，请检查其证书与 TLS 设置）"
+        reason = html.escape(message)
         view.load_html(ERROR_PAGE.format(reason=reason, url=HOME_URL), HOME_URL)
         return True
 
