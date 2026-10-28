@@ -1,0 +1,3 @@
+#!/bin/sh
+# 豆包 Linux 客户端启动器
+exec python3 /opt/doubao/doubao.py "$@"

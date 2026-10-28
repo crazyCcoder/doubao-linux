@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=豆包
+Name[zh_CN]=豆包
+GenericName=AI 智能助手
+GenericName[zh_CN]=AI 智能助手
+Comment=豆包 AI 智能助手桌面客户端
+Comment[zh_CN]=豆包 AI 智能助手桌面客户端
+Exec=doubao %U
+Icon=doubao
+Terminal=false
+Categories=Network;Chat;
+Keywords=Doubao;AI;chat;assistant;豆包;助手;
+StartupNotify=true
+StartupWMClass=doubao
