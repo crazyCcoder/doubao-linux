@@ -35,12 +35,25 @@
 系统要求：Debian / Ubuntu / Deepin / UOS 等 amd64 桌面系统。
 
 ```bash
-sudo dpkg -i doubao_1.0.2_amd64.deb
+sudo dpkg -i doubao_1.1.0_amd64.deb
 sudo apt -f install   # 自动补齐依赖
 ```
 
 依赖：`python3 (>= 3.7)`、`python3-gi`、`gir1.2-gtk-3.0`、
 `gir1.2-webkit2-4.0`、`libwebkit2gtk-4.0-37`。
+
+推荐安装 Chrome / Chromium / Edge（`Recommends`，非强制）。启动器会自动检测并按
+以下优先级选择内核：
+
+1. 检测到 Chromium 内核 → 以 `--app` 模式启动，独立配置目录在
+   `~/.config/doubao/browser`（与日常浏览器互不干扰）
+2. 未检测到 → 回退到自带 GTK3 + WebKit2GTK 窗口
+
+强制使用 WebKit 内核：
+
+```bash
+DOUBAO_FORCE_WEBKIT=1 doubao
+```
 
 安装后可从应用菜单启动「豆包」，或终端执行：
 
@@ -59,7 +72,7 @@ sudo apt remove doubao
 打包源目录为 `build/doubao-deb/`（Debian 包标准目录结构）：
 
 ```bash
-dpkg-deb --build --root-owner-group build/doubao-deb doubao_1.0.2_amd64.deb
+dpkg-deb --build --root-owner-group build/doubao-deb doubao_1.1.0_amd64.deb
 ```
 
 ## 项目结构
@@ -68,7 +81,7 @@ dpkg-deb --build --root-owner-group build/doubao-deb doubao_1.0.2_amd64.deb
 .
 ├── .gitignore                  # 忽略官方 exe 参考样本（专有二进制，不入库）
 ├── README.md                   # 本说明
-├── doubao_1.0.2_amd64.deb      # 构建产物：Linux 安装包
+├── doubao_1.1.0_amd64.deb      # 构建产物：Linux 安装包
 └── build/doubao-deb/           # deb 打包源目录
     ├── DEBIAN/                 # control / postinst / postrm
     ├── opt/doubao/doubao.py    # 客户端主体（约 200 行 Python）
@@ -107,18 +120,23 @@ G_TLS_GNUTLS_PRIORITY="NORMAL:-VERS-TLS1.3" doubao
 
 ### 点击某些功能后异常卡顿
 
-1.0.2 已开启 WebKit 的 2D canvas 硬件加速与 DNS 预取。若仍卡顿，用调试模式启动
-定位具体原因（卡顿时把终端里 `[perf]` 开头的行记录下来）：
+实测日志（`DOUBAO_DEBUG=1 doubao`）显示两处瓶颈，均源于 WebKit2GTK 内核本身：
+
+- **静态资源串行加载**：豆包前端有上百个 JS/CSS chunk，而 UOS 自带的
+  `libsoup 2.64` 不支持 HTTP/2，HTTP/1.1 单域名只能并发约 6 个连接，
+  每个 chunk 排队 1~3 秒
+- **主线程长阻塞**：解析执行大体积前端 bundle 时出现 2~7 秒的 `block`，
+  JavaScriptCore 在这类 React 应用上明显慢于 V8
+
+因此 1.1.0 起默认优先使用 Chromium 内核（HTTP/2 多路复用 + V8）。若仍想用
+WebKit 内核排查，可这样启动并观察 `[perf]` 输出：
 
 ```bash
-DOUBAO_DEBUG=1 doubao
+DOUBAO_FORCE_WEBKIT=1 DOUBAO_DEBUG=1 doubao
 ```
 
-- `[perf] block 1200ms ...` —— 页面主线程被阻塞的时长（前端自身 JS 重计算）
+- `[perf] block 1200ms ...` —— 页面主线程被阻塞的时长（前端 JS 重计算）
 - `[perf] slowres 3500ms <url>` —— 超过 1 秒的慢请求（网络/接口问题）
-
-两者区别很重要：`block` 多说明卡在页面脚本运算（WebKit 引擎侧），`slowres` 多
-说明卡在等待网络响应。
 
 ## 已知限制
 

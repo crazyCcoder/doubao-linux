@@ -1,12 +1,14 @@
 Package: doubao
-Version: 1.0.2
+Version: 1.1.0
 Architecture: amd64
 Maintainer: Doubao Linux Port <doubao@localhost>
 Installed-Size: 132
 Depends: python3 (>= 3.7), python3-gi, gir1.2-gtk-3.0, gir1.2-webkit2-4.0, libwebkit2gtk-4.0-37
+Recommends: google-chrome-stable | chromium | microsoft-edge-stable
 Section: net
 Priority: optional
 Description: 豆包 AI 智能助手桌面客户端（Linux 版）
- 对应豆包 Windows 客户端（doubao_client_77737216855802812777）的 Linux 实现，
- 采用 GTK3 + WebKit2GTK 原生窗口承载豆包服务，支持登录态持久化、文件下载、
+ 对应豆包 Windows 客户端（doubao_client_77737216855802812777）的 Linux 实现。
+ 检测到 Chrome/Chromium/Edge 时以 app 模式承载（HTTP/2 + V8，切换对话更流畅），
+ 否则回退到自带的 GTK3 + WebKit2GTK 原生窗口，支持登录态持久化、文件下载、
  外链跳转、麦克风授权与常用快捷键。

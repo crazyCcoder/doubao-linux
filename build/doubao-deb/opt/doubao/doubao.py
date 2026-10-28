@@ -31,7 +31,7 @@ ICON_PATH = "/usr/share/icons/hicolor/256x256/apps/doubao.png"
 LOCAL_ICON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "doubao.png")
 UA = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/114.0.0.0 Safari/537.36 DoubaoDesktop/1.0.2"
+    "Chrome/114.0.0.0 Safari/537.36 DoubaoDesktop/1.1.0"
 )
 
 ERROR_PAGE = """<!DOCTYPE html><html><head><meta charset="utf-8">

@@ -1,3 +1,23 @@
 #!/bin/sh
 # 豆包 Linux 客户端启动器
+#
+# 优先用 Chromium 内核（Chrome / Chromium / Edge）以 app 模式承载豆包：
+# HTTP/2 多路复用 + V8 能显著减少切换对话时的卡顿。
+# 未安装 Chromium 内核时，回退到自带的 GTK3 + WebKit2GTK 原生窗口。
+
+export G_TLS_GNUTLS_PRIORITY="${G_TLS_GNUTLS_PRIORITY:-NORMAL:-VERS-TLS1.3}"
+
+for browser in google-chrome google-chrome-stable chromium chromium-browser microsoft-edge-stable microsoft-edge; do
+    if [ "$DOUBAO_FORCE_WEBKIT" != "1" ] && command -v "$browser" >/dev/null 2>&1; then
+        exec "$browser" \
+            --app=https://www.doubao.com/chat/ \
+            --class=doubao \
+            --user-data-dir="${DOUBAO_PROFILE:-$HOME/.config/doubao/browser}" \
+            --no-first-run \
+            --no-default-browser-check \
+            --window-size=1280,820 \
+            "$@"
+    fi
+done
+
 exec python3 /opt/doubao/doubao.py "$@"
